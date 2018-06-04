@@ -2,7 +2,8 @@ class TodosController < ApplicationController
   # GET /todos
   # GET /todos.json
   def index
-    @todos = Todo.all
+    # @todos = Todo.all
+    @todos = fetch_cached_todos
 
     respond_to do |format|
       format.html # index.html.erb
@@ -72,5 +73,19 @@ class TodosController < ApplicationController
       format.html { redirect_to todos_url }
       format.json { head :no_content }
     end
+  end
+
+  private
+
+  def fetch_cached_todos
+    todos = $redis.get('todos')
+
+    if todos.nil?
+      todos = Todo.all.to_json
+      $redis.set('todos', todos)
+      $redis.expire('todos', 1.hour.to_i)
+    end
+
+    JSON.parse(todos)
   end
 end
